@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test';
+
+test('chấm công hằng ngày lọc, xét điều chỉnh đã duyệt và xuất CSV', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Dữ liệu sẵn sàng')).toBeVisible();
+  await page.getByRole('button', { name: 'Chấm công hằng ngày', exact: true }).click();
+  await page.getByLabel('Ngày chấm công').fill('2026-10-28');
+  const filter = page.getByLabel('Tìm nhân viên');
+  await filter.fill('NV010');
+  const adjusted = page.getByRole('row').filter({ hasText: 'NV010' });
+  await expect(adjusted).toContainText('08:25:00');
+  await expect(adjusted).toContainText('17:30:00');
+  await expect(adjusted).toContainText('Chưa tính');
+  await adjusted.getByRole('button', { name: 'Xem chấm công của Nhân viên Demo 010' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Chấm công của Nhân viên Demo 010' });
+  await expect(dialog.getByLabel('Ngày xem chấm công')).toHaveValue('2026-10-28');
+  await dialog.getByRole('button', { name: 'Đóng' }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Xuất CSV' }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe('cham-cong-2026-10-28.csv');
+  await filter.fill('NV002');
+  await page.getByRole('button', { name: 'Đi muộn', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'NV002' })).toContainText('Vào sau giờ ca');
+  await filter.fill('NV007');
+  await page.getByRole('button', { name: 'Cần xác minh', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'NV007' })).toContainText('Cảnh báo HR chưa xác minh');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('heading', { name: 'Chấm công hằng ngày' })).toBeVisible();
+  await page.screenshot({ path: '/tmp/worktrack-daily-mobile.png' });
+});

@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WorkTrack Frontend
 
-## Getting Started
+Giao diện React/Next.js kết nối API Django, dùng MySQL đã cấu hình trong backend. Không có đăng nhập. Nhận diện khuôn mặt trên màn quét là mô phỏng, không sử dụng camera.
 
-First, run the development server:
+## Giao diện dùng chung
+
+Các component shadcn/ui được quản lý trong `components/ui` và cấu hình tại `components.json`. Dùng `AppButton` cho nút thao tác và `FormField` cho ô nhập, vùng nhập và danh sách chọn thông thường; chúng dùng các component Button, Input, Textarea và Native Select của shadcn/ui. Ô chọn nhân viên dùng chung Popover và Command của shadcn/ui, hỗ trợ tìm theo mã hoặc tên. Hộp thoại và một số điều khiển khác vẫn dùng MUI, với font và màu đồng bộ. Font Noto Sans hỗ trợ tiếng Việt được đóng gói cùng ứng dụng.
+
+## Chạy demo
+
+Mở hai terminal từ thư mục `WorkTrack`.
+
+**Terminal 1 — backend:**
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd work-track_be
+source .venv/bin/activate
+python manage.py check_db
+python manage.py runserver 127.0.0.1:8000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Backend đọc cấu hình MySQL trong `work-track_be/.env`. Xem [hướng dẫn backend](../work-track_be/README.md) nếu chưa kết nối được database.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Terminal 2 — frontend:**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd work-track_fe
+npm install
+npm run dev
+```
 
-## Learn More
+Mở `http://localhost:3000`. Frontend gọi `/api/...`; Next.js chuyển tiếp đến Django tại `http://127.0.0.1:8000`. Nếu backend dùng địa chỉ khác, chỉnh `BACKEND_API_ORIGIN` trong `.env.local` (có thể sao chép từ `.env.example`) rồi khởi động lại frontend. Không đưa thông tin MySQL vào cấu hình frontend.
 
-To learn more about Next.js, take a look at the following resources:
+## Có thể thử
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Chọn nhân viên và cơ sở từ database. Bấm **Quét chấm công**; backend tự quyết định IN/OUT. Không cần bấm xác nhận.
+- Chọn **QR đi support**: cơ sở có QR động đổi theo giờ thực; bấm **Lấy mã đang hiển thị**, chọn vị trí mô phỏng rồi bấm **Chấm công bằng QR**. Có thể sửa/xóa mã để thử sai/thiếu mã; chọn vị trí ngoài khu vực hoặc không lấy được để tạo yêu cầu xác minh.
+- Quét lại trong ngưỡng cooldown: nhận lý do bỏ qua; lượt này không đảo IN/OUT. Có thể chọn kết quả nhận diện lỗi để thử thông báo.
+- Đặt mốc giờ demo và bấm **Áp dụng**; đồng hồ chạy tiếp theo thời gian thực đã trôi qua, hoặc bấm **Về giờ hiện tại**. Giờ demo được gửi tới API mô phỏng; khi dùng giờ hiện tại backend lấy giờ server.
+- Tiếng Việt: có bật/tắt, âm lượng, nghe thử; IN chào tên, OUT tạm biệt tên, lỗi đọc lý do. Với 100 tên mẫu và các lỗi phổ biến, ưu tiên file giọng Piper tạo offline. Với tên khác, ưu tiên giọng tiếng Việt cục bộ của trình duyệt; nếu không có, đọc lời chào chung và thông báo thiếu bản thu tên.
+- Tab **Chấm công hằng ngày** tổng hợp từng nhân viên theo ngày; lọc cơ sở mặc định, tên/mã, cần xác minh, vào sau giờ ca và xuất CSV. Lượt hiệu lực gồm lượt quét được ghi nhận và điều chỉnh đã duyệt; công thường chưa được tính. Chi tiết hiển thị lượt quét gốc.
+- Xem dữ liệu đã lưu ở Lịch sử chấm công, Nhân viên, Lịch & phân công, Cảnh báo HR, Giải trình. Trong danh sách Nhân viên, bấm **Xem chấm công** để xem ca và dòng thời gian lượt quét của từng người; mặc định theo ngày trên đồng hồ demo và có thể chọn ngày khác. Tại **Lịch & phân công → Phân công support**, HR tạo/sửa/hủy phân công; có thể tạo trực tiếp từ một cảnh báo HR. Nếu chưa có ca, bấm **Tạo ca demo** để chủ động tạo ca 08:30–17:30. Phân công bù không tự đóng cảnh báo. Có lọc và phân trang. HR mô phỏng có thể xác minh cảnh báo, duyệt/từ chối yêu cầu bằng ghi chú; dữ liệu gốc được giữ nguyên.
+- Nếu kết nối gián đoạn sau khi gửi, giữ lại lượt đó và bấm **Thử lại cùng lượt quét**. Request ID và nội dung không đổi, kể cả reload cùng tab, để backend trả lại kết quả cũ nếu đã ghi; không tạo lượt trùng.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Quét trên FE **ghi thật vào MySQL đang cấu hình**. Các thao tác xác minh/duyệt cập nhật MySQL và ghi nhật ký HR mô phỏng. QR được backend phát/kiểm tra và tạo hình quét được; thao tác đọc QR và GPS trong demo là mô phỏng. Camera/GPS thật và bảng tính công chưa triển khai.
 
-## Deploy on Vercel
+`public/audio/` chứa 218 câu nói demo tạo offline bằng [Piper vi_VN-vais1000-medium](https://huggingface.co/rhasspy/piper-voices/tree/217ddc7/vi/vi_VN/vais1000/medium) (nguồn VAIS-1000 được ghi trong model card). Không cần cài Piper hoặc tải mô hình khi chạy ứng dụng và không gửi tên nhân viên tới dịch vụ TTS ngoài. Để tạo lại, cài `piper-tts` trong một môi trường Python riêng, tải mô hình `.onnx` cùng file `.onnx.json`, rồi chạy `python scripts/generate-piper-audio.py --model /duong-dan/ten-model.onnx --output /thu-muc-tam`; nghe thử trước khi chép các file vào `public/audio/`. Generator eSpeak cũ được giữ tại `scripts/generate-demo-audio.py`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Kiểm tra
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+Kiểm thử trình duyệt FE ↔ Django ↔ MySQL trên instance tạm, độc lập (Linux có `mysqld`, `mysql`, Chrome và backend `.venv`):
+
+```bash
+bash scripts/run-e2e.sh
+```
+
+Script tạo database tạm trong `/tmp`, dùng cổng 8011/3011, import schema/seed, chạy Playwright rồi dừng các server. Không kết nối hoặc ghi vào MySQL cổng 3307 của bạn. Để đổi Chrome, truyền `CHROME_PATH=/đường/dẫn/chrome`.
+
+Các trường hợp kiểm tra: tải 100 người/5 cơ sở; IN, quét lặp, OUT; đồng hồ demo tiếp tục chạy; mất phản hồi sau khi ghi và retry không thêm lượt; âm thanh dự phòng khi không có giọng Việt; lọc nhân viên và màn hình điện thoại; QR hết hạn/thu hồi, chưa phân công và thiếu GPS.
