@@ -4,11 +4,9 @@ import { lazy, Suspense, useState, type FC } from "react";
 import Image from "next/image";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import {
-  ArrowUpRight,
   Building2,
   CalendarDays,
   CircleHelp,
-  ClipboardCheck,
   Clock3,
   FileClock,
   ScanFace,
@@ -17,11 +15,19 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { Skeleton, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import {
+  Alert,
+  Skeleton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
 import Providers from "@/components/providers";
 import { QueryBoundary } from "@/components/query-boundary";
 import { attendanceApi } from "../api/attendance-api";
 import { useDemoClock } from "../hooks/use-demo-clock";
+import { useDefaultSchedules } from "../hooks/use-default-schedules";
 import { vietnamDate, shortDate } from "../helpers/format";
 import type { View } from "../types";
 import ScanDesk from "./scan-desk";
@@ -44,7 +50,8 @@ const titles: Record<View, { title: string; description: string }> = {
   },
   daily: {
     title: "Chấm công hằng ngày",
-    description: "Theo dõi lượt vào, ra và các trường hợp cần xác minh theo từng nhân viên.",
+    description:
+      "Theo dõi lượt vào, ra và các trường hợp cần xác minh theo từng nhân viên.",
   },
   history: {
     title: "Lịch sử chấm công",
@@ -90,8 +97,17 @@ const Workspace: FC<{ view: View; clock: ReturnType<typeof useDemoClock> }> = ({
   const employees = employeesQuery.data;
   const facilities = facilitiesQuery.data;
   const stale = !!employeesQuery.error || !!facilitiesQuery.error;
+  const scheduleSetup = useDefaultSchedules(vietnamDate(clock.now));
   return (
     <>
+      {scheduleSetup.error && (
+        <Alert
+          severity="warning"
+          action={<Button onClick={scheduleSetup.retry}>Thử lại</Button>}
+        >
+          Không thể tạo ca mặc định. Hãy kiểm tra kết nối và thử lại.
+        </Alert>
+      )}
       <div className="summary-strip">
         <div>
           <span className="summary-icon">
@@ -133,9 +149,23 @@ const Workspace: FC<{ view: View; clock: ReturnType<typeof useDemoClock> }> = ({
         </div>
       </div>
       <div hidden={view !== "scan"}>
-        <ScanDesk employees={employees} facilities={facilities} clock={clock} active={view === "scan"} />
+        <ScanDesk
+          employees={employees}
+          facilities={facilities}
+          clock={clock}
+          active={view === "scan"}
+        />
       </div>
-      {view === "daily" && <Suspense fallback={<Skeleton variant="rounded" height={450} />}><DailyAttendance employees={employees} facilities={facilities} initialDate={vietnamDate(clock.now)} now={clock.now}/></Suspense>}
+      {view === "daily" && (
+        <Suspense fallback={<Skeleton variant="rounded" height={450} />}>
+          <DailyAttendance
+            employees={employees}
+            facilities={facilities}
+            initialDate={vietnamDate(clock.now)}
+            now={clock.now}
+          />
+        </Suspense>
+      )}
       {view !== "scan" && view !== "daily" && (
         <Suspense fallback={<Skeleton variant="rounded" height={450} />}>
           <RecordsView
@@ -216,25 +246,13 @@ const AppShell: FC = () => {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-note">
-            <span className="small-icon">
-              <ClipboardCheck size={19} />
-            </span>
-            <strong>Di chuyển vẫn tính công</strong>
-            <p>
-              Chuyển cơ sở không tự ngắt công. Thiếu phân công chỉ cảnh báo HR.
-            </p>
-            <button onClick={() => setHelp(!help)}>
-              Quy tắc demo <ArrowUpRight size={13} />
-            </button>
-          </div>
+
           <div className="demo-workspace">
             <span className="live-dot" />
             <div>
-              <strong>Không gian demo</strong>
-              <small>Không cần đăng nhập</small>
+              <strong>Mai Anh</strong>
+              <small>HR · Vai trò xem thử</small>
             </div>
-            <span className="pill neutral">LOCAL</span>
           </div>
         </div>
       </aside>
@@ -278,17 +296,40 @@ const AppShell: FC = () => {
               <ScanFace size={25} />
             </span>
           </div>
-          <Dialog open={help} onClose={() => setHelp(false)} aria-labelledby="help-title" fullWidth maxWidth="sm">
+          <Dialog
+            open={help}
+            onClose={() => setHelp(false)}
+            aria-labelledby="help-title"
+            fullWidth
+            maxWidth="sm"
+          >
             <DialogTitle id="help-title">Cách thử nhanh</DialogTitle>
             <DialogContent dividers>
               <div className="help-dialog-content">
-                <p>Chọn nhân viên và cơ sở, sau đó quét mặt hoặc chọn QR đi support để ghi nhận.</p>
-                <p>Quét lại trước 10 giây để thử chống lặp; chỉnh giờ demo để thử lượt ra. Đổi cơ sở để xem cảnh báo support.</p>
-                <p>Với QR, bấm lấy mã đang hiển thị, chọn vị trí mô phỏng rồi chấm công. HR có thể xác minh cảnh báo và duyệt yêu cầu hiện diện.</p>
-                <p>Giờ ngoài ca không tự tính OT. Nhận diện và vị trí là mô phỏng; bảng tính công chưa được triển khai.</p>
+                <p>
+                  Chọn nhân viên và cơ sở, sau đó quét mặt hoặc chọn QR đi
+                  support để ghi nhận.
+                </p>
+                <p>
+                  Quét lại trước 10 giây để thử chống lặp; chỉnh giờ demo để thử
+                  lượt ra. Đổi cơ sở để xem cảnh báo support.
+                </p>
+                <p>
+                  Với QR, bấm lấy mã đang hiển thị, chọn vị trí mô phỏng rồi
+                  chấm công. HR có thể xác minh cảnh báo và duyệt yêu cầu hiện
+                  diện.
+                </p>
+                <p>
+                  Giờ ngoài ca không tự tính OT. Nhận diện và vị trí là mô
+                  phỏng; bảng tính công chưa được triển khai.
+                </p>
               </div>
             </DialogContent>
-            <DialogActions><Button onClick={() => setHelp(false)} variant="contained">Đã hiểu</Button></DialogActions>
+            <DialogActions>
+              <Button onClick={() => setHelp(false)} variant="contained">
+                Đã hiểu
+              </Button>
+            </DialogActions>
           </Dialog>
           <QueryBoundary>
             <Workspace view={view} clock={clock} />

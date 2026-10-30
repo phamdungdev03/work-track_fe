@@ -215,6 +215,7 @@ const ScanDesk: FC<Props> = ({ employees, facilities, clock, active }) => {
       void queryClient.invalidateQueries({ queryKey: ["alerts"] });
       void queryClient.invalidateQueries({ queryKey: ["requests"] });
       void queryClient.invalidateQueries({ queryKey: ["daily-attendance"] });
+      void queryClient.invalidateQueries({ queryKey: ["monthly-attendance"] });
     },
     onError: (error) => {
       const ambiguous = isAmbiguousFailure(error);

@@ -14,6 +14,7 @@ import { errorMessage } from "@/lib/api-client";
 import { ClipboardList, RefreshCw, Search, Plus } from "lucide-react";
 import SupportForm from "./support-form";
 import { EmployeeAttendanceDialog } from "./employee-attendance-dialog";
+import { useDefaultSchedules } from "../hooks/use-default-schedules";
 import { QueryBoundary } from "@/components/query-boundary";
 import { attendanceApi } from "../api/attendance-api";
 import { label, shortDate, vietnamTime, vietnamDate } from "../helpers/format";
@@ -135,6 +136,7 @@ const RecordsView: FC<Props> = ({
   initialDate,
 }) => {
   const [date, setDate] = useState(initialDate);
+  const scheduleSetup = useDefaultSchedules(view === "schedules" ? date : "");
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [facility, setFacility] = useState("");
   const [status, setStatus] = useState("");
@@ -162,6 +164,7 @@ const RecordsView: FC<Props> = ({
       void queryClient.invalidateQueries({ queryKey: ['requests'] });
       void queryClient.invalidateQueries({ queryKey: ['scans'] });
       void queryClient.invalidateQueries({ queryKey: ['daily-attendance'] });
+      void queryClient.invalidateQueries({ queryKey: ['monthly-attendance'] });
     },
     onError: (error) => { setReviewError(errorMessage(error)); void queryClient.invalidateQueries({ queryKey: [review?.kind === 'alert' ? 'alerts' : 'requests'] }); },
   });
@@ -319,6 +322,7 @@ const RecordsView: FC<Props> = ({
   );
   return (
     <section className="panel records-panel">
+      {scheduleSetup.error && <Alert severity="warning" action={<Button onClick={scheduleSetup.retry}>Thử lại</Button>}>Không thể tạo ca mặc định cho ngày đã chọn.</Alert>}
       {view === "schedules" && (
         <div className="sub-tabs">
           <button
@@ -443,7 +447,7 @@ const RecordsView: FC<Props> = ({
           />
         )}
         {view === "schedules" && scheduleTab === "schedules" && (
-          <RecordTable
+          scheduleSetup.pending ? <div className="empty-state" role="status">Đang chuẩn bị lịch ca…</div> : <RecordTable
             resource="schedules"
             params={params}
             load={attendanceApi.schedules}
@@ -453,7 +457,7 @@ const RecordsView: FC<Props> = ({
           />
         )}
         {view === "schedules" && scheduleTab === "support" && (
-          <SupportTable
+          scheduleSetup.pending ? <div className="empty-state" role="status">Đang chuẩn bị lịch ca…</div> : <SupportTable
             params={params}
             page={page}
             setPage={setPage}
@@ -543,7 +547,7 @@ const RecordsView: FC<Props> = ({
             {review.kind === 'alert' ? <><p><strong>Cơ sở:</strong> {facilityName(review.item.facility)} · <strong>Ngày:</strong> {shortDate(review.item.work_date)}</p><p>{label(review.item.alert_type)}</p><QueryBoundary compact><AlertEvidence alert={review.item}/></QueryBoundary></> : <><p><strong>Yêu cầu:</strong> {label(review.item.request_type)}</p><p><strong>Lý do:</strong> {review.item.reason}</p><p><strong>Đề xuất:</strong> {review.item.proposed_event_type ? label(review.item.proposed_event_type) : '—'} {review.item.proposed_occurred_at ? `${vietnamTime(review.item.proposed_occurred_at)} · ${shortDate(vietnamDate(Date.parse(review.item.proposed_occurred_at)))}` : ''} · {facilityName(review.item.proposed_facility)}</p></>}
             <FormField autoFocus fullWidth multiline minRows={3} required label="Ghi chú xác minh" value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} slotProps={{ htmlInput: { maxLength: 1000 } }} helperText="Ghi lại kết quả kiểm tra hoặc lý do để lưu nhật ký." />
             {reviewError && <Alert severity="error">{reviewError}</Alert>}
-            {review?.kind === 'request' && review.decision === 'APPROVED' && <p className="subtle">Yêu cầu được duyệt sẽ là dữ liệu điều chỉnh; lượt quét gốc không bị sửa. Bảng tính công chưa được triển khai.</p>}
+            {review?.kind === 'request' && review.decision === 'APPROVED' && <p className="subtle">Yêu cầu được duyệt sẽ tham gia tính công; lượt quét gốc không bị sửa.</p>}
           </div>}
         </DialogContent>
         <DialogActions><Button disabled={mutation.isPending} onClick={() => setReview(null)}>Hủy</Button><Button disabled={!reviewNote.trim() || mutation.isPending} variant="contained" color={review?.kind === 'request' && review.decision === 'REJECTED' ? 'error' : 'primary'} onClick={() => { if (review) mutation.mutate(review); }}>{mutation.isPending ? 'Đang lưu…' : review?.kind === 'alert' ? 'Xác nhận đã xác minh' : review?.decision === 'APPROVED' ? 'Xác nhận duyệt' : 'Xác nhận từ chối'}</Button></DialogActions>
@@ -587,20 +591,16 @@ const SupportTable: FC<{
       ),
     },
     {
-      title: "Thời gian",
+      title: "Thời gian support",
       render: (r) => (
         <>
           {vietnamTime(r.depart_at).slice(0, 5)} →{" "}
-          {vietnamTime(r.expected_arrival_at).slice(0, 5)}
+          {vietnamTime(r.support_ends_at).slice(0, 5)}
           <small className="block">
             {shortDate(vietnamDate(Date.parse(r.depart_at)))}
           </small>
         </>
       ),
-    },
-    {
-      title: "Kết thúc",
-      render: (r) => vietnamTime(r.support_ends_at).slice(0, 5),
     },
     { title: "Lý do", render: (r) => r.reason },
     { title: "Trạng thái", render: (r) => <Status value={r.status} /> },
