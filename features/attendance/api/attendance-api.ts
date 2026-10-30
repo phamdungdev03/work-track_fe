@@ -15,6 +15,8 @@ import type {
   QrScanPayload,
   SupportCreate,
   SupportFields,
+  WorkDay,
+  WorkMonth,
 } from "../types";
 
 async function list<T>(path: string, params: Params = {}): Promise<Page<T>> {
@@ -38,6 +40,11 @@ async function all<T>(path: string, params: Params = {}): Promise<T[]> {
 }
 
 export const attendanceApi = {
+  ensureDefaultSchedules: async (work_date: string) =>
+    (await apiClient.post<{ work_date: string; created: number; existing: number }>('/schedules/defaults/', { work_date })).data,
+  workDays: async (date: string, as_of: string) => (await apiClient.get<WorkDay[]>('/work-days/', { params: { date, as_of } })).data,
+  workMonths: async (month: string, as_of: string) => (await apiClient.get<WorkMonth[]>('/work-months/', { params: { month, as_of } })).data,
+  createAddEvent: async (payload: { request_id: string; employee_id: number; date: string; facility_id: number; event_type: 'IN' | 'OUT'; occurred_at: string; reason: string; target_scan_id?: number }) => (await apiClient.post<{ request: AttendanceRequest; replayed: boolean }>('/requests/add-event/', payload)).data,
   employees: () => all<Employee>("/employees/"),
   facilities: () => all<Facility>("/facilities/"),
   scans: (params: Params) => list<Scan>("/scans/", params),

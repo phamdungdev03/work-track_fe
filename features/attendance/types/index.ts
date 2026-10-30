@@ -75,7 +75,7 @@ export interface Support {
   from_facility: number;
   to_facility: number;
   depart_at: string;
-  expected_arrival_at: string;
+  expected_arrival_at: string | null;
   support_ends_at: string;
   status: string;
   reason: string;
@@ -106,6 +106,12 @@ export interface AttendanceRequest {
   review_note: string | null;
   created_at: string;
 }
+export interface WorkDay {
+  employee_id: number; date: string; first_in: string | null; last_out: string | null;
+  last_facility_id: number | null; work_minutes: number | null; late_minutes: number | null;
+  early_minutes: number | null; needs_review: boolean; reasons: string[]; status: string;
+}
+export interface WorkMonth { employee_id: number; late_count: number; early_count: number; incomplete_count: number }
 export type View =
   | "scan"
   | "daily"
@@ -139,7 +145,6 @@ export interface SupportFields {
   from_facility_id: number;
   to_facility_id: number;
   depart_at: string;
-  expected_arrival_at: string;
   support_ends_at: string;
   reason: string;
 }

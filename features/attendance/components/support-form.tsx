@@ -54,9 +54,6 @@ const SupportForm: FC<Props> = ({ action, employees, facilities, onClose }) => {
   const [depart, setDepart] = useState(
     assignment ? localTime(assignment.depart_at) : "10:00",
   );
-  const [arrival, setArrival] = useState(
-    assignment ? localTime(assignment.expected_arrival_at) : "10:30",
-  );
   const [end, setEnd] = useState(
     assignment ? localTime(assignment.support_ends_at) : "17:30",
   );
@@ -170,7 +167,6 @@ const SupportForm: FC<Props> = ({ action, employees, facilities, onClose }) => {
       !actualFrom ||
       !to ||
       !depart ||
-      !arrival ||
       !end
     ) {
       setError("Vui lòng chọn nhân viên, ca và điền đủ thông tin.");
@@ -184,13 +180,12 @@ const SupportForm: FC<Props> = ({ action, employees, facilities, onClose }) => {
       from_facility_id: actualFrom,
       to_facility_id: to,
       depart_at: stamp(date, depart),
-      expected_arrival_at: stamp(date, arrival),
       support_ends_at: stamp(date, end),
       reason: reason.trim(),
     };
-    if (depart > arrival || arrival >= end) {
+    if (depart >= end) {
       setError(
-        "Giờ đi phải trước hoặc bằng giờ đến; giờ đến phải trước giờ kết thúc.",
+        "Giờ bắt đầu support phải trước giờ kết thúc.",
       );
       return;
     }
@@ -338,20 +333,11 @@ const SupportForm: FC<Props> = ({ action, employees, facilities, onClose }) => {
               </div>
               <div className="support-times">
                 <FormField
-                  label="Giờ đi"
+                  label="Bắt đầu support"
                   type="time"
                   value={depart}
                   disabled={locked}
                   onChange={(e) => setDepart(e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  required
-                />
-                <FormField
-                  label="Giờ đến dự kiến"
-                  type="time"
-                  value={arrival}
-                  disabled={locked}
-                  onChange={(e) => setArrival(e.target.value)}
                   slotProps={{ inputLabel: { shrink: true } }}
                   required
                 />

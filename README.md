@@ -31,6 +31,8 @@ npm run dev
 
 Mở `http://localhost:3000`. Frontend gọi `/api/...`; Next.js chuyển tiếp đến Django tại `http://127.0.0.1:8000`. Nếu backend dùng địa chỉ khác, chỉnh `BACKEND_API_ORIGIN` trong `.env.local` (có thể sao chép từ `.env.example`) rồi khởi động lại frontend. Không đưa thông tin MySQL vào cấu hình frontend.
 
+Khi mở ứng dụng, qua ngày mới hoặc xem lịch ngày hiện tại/tương lai, demo tự tạo ca 08:30–17:30 cho nhân viên đang hoạt động và đủ điều kiện, kể cả cuối tuần. Ca đã có hoặc đã hủy được giữ nguyên; ngày đã qua không tự tạo. Nếu chưa mở ứng dụng, lượt quét demo vẫn tự tạo ca cho riêng nhân viên đủ điều kiện của ngày đó.
+
 ## Có thể thử
 
 - Chọn nhân viên và cơ sở từ database. Bấm **Quét chấm công**; backend tự quyết định IN/OUT. Không cần bấm xác nhận.
@@ -38,7 +40,7 @@ Mở `http://localhost:3000`. Frontend gọi `/api/...`; Next.js chuyển tiếp
 - Quét lại trong ngưỡng cooldown: nhận lý do bỏ qua; lượt này không đảo IN/OUT. Có thể chọn kết quả nhận diện lỗi để thử thông báo.
 - Đặt mốc giờ demo và bấm **Áp dụng**; đồng hồ chạy tiếp theo thời gian thực đã trôi qua, hoặc bấm **Về giờ hiện tại**. Giờ demo được gửi tới API mô phỏng; khi dùng giờ hiện tại backend lấy giờ server.
 - Tiếng Việt: có bật/tắt, âm lượng, nghe thử; IN chào tên, OUT tạm biệt tên, lỗi đọc lý do. Với 100 tên mẫu và các lỗi phổ biến, ưu tiên file giọng Piper tạo offline. Với tên khác, ưu tiên giọng tiếng Việt cục bộ của trình duyệt; nếu không có, đọc lời chào chung và thông báo thiếu bản thu tên.
-- Tab **Chấm công hằng ngày** tổng hợp từng nhân viên theo ngày; lọc cơ sở mặc định, tên/mã, cần xác minh, vào sau giờ ca và xuất CSV. Lượt hiệu lực gồm lượt quét được ghi nhận và điều chỉnh đã duyệt; công thường chưa được tính. Chi tiết hiển thị lượt quét gốc.
+- Tab **Chấm công hằng ngày** tính công ca demo 08:30–17:30 từ lượt hiệu lực, hiển thị phút muộn/sớm, các lý do cần xác minh và cho gửi giải trình bổ sung/sửa lượt. Nếu quên IN đầu ca khiến lượt ra bị suy là IN, gửi yêu cầu sửa lượt đó thành OUT và sau khi duyệt gửi thêm yêu cầu bổ sung IN. Mục **Thống kê tháng** đếm số ngày đi muộn/về sớm và ngày ca đã kết thúc nhưng chưa đủ dữ liệu. HR duyệt/từ chối yêu cầu ở mục Giải trình; chi tiết nhân viên hiển thị lượt quét gốc.
 - Xem dữ liệu đã lưu ở Lịch sử chấm công, Nhân viên, Lịch & phân công, Cảnh báo HR, Giải trình. Trong danh sách Nhân viên, bấm **Xem chấm công** để xem ca và dòng thời gian lượt quét của từng người; mặc định theo ngày trên đồng hồ demo và có thể chọn ngày khác. Tại **Lịch & phân công → Phân công support**, HR tạo/sửa/hủy phân công; có thể tạo trực tiếp từ một cảnh báo HR. Nếu chưa có ca, bấm **Tạo ca demo** để chủ động tạo ca 08:30–17:30. Phân công bù không tự đóng cảnh báo. Có lọc và phân trang. HR mô phỏng có thể xác minh cảnh báo, duyệt/từ chối yêu cầu bằng ghi chú; dữ liệu gốc được giữ nguyên.
 - Nếu kết nối gián đoạn sau khi gửi, giữ lại lượt đó và bấm **Thử lại cùng lượt quét**. Request ID và nội dung không đổi, kể cả reload cùng tab, để backend trả lại kết quả cũ nếu đã ghi; không tạo lượt trùng.
 

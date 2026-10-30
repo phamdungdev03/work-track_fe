@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test';
+
+test('tạo và sửa phân công với hai mốc support', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Lịch & phân công', exact: true }).click();
+  await page.getByRole('button', { name: 'Phân công support', exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo phân công support' }).click();
+  const form = page.getByRole('dialog', { name: 'Tạo phân công support' });
+  await form.getByRole('combobox', { name: 'Nhân viên' }).click();
+  await form.getByPlaceholder('Tìm theo mã hoặc họ tên').fill('NV001');
+  await page.getByRole('option', { name: /NV001/ }).click();
+  await form.getByLabel('Ngày làm việc').fill('2026-10-28');
+  await form.getByLabel('Cơ sở đến').selectOption('2');
+  await form.getByLabel('Bắt đầu support').fill('09:00');
+  await form.getByLabel('Kết thúc support').fill('10:00');
+  await form.getByLabel('Lý do support').fill('Hỗ trợ chuẩn bị');
+  await expect(form.getByText('Giờ đến dự kiến')).toHaveCount(0);
+  await form.getByRole('button', { name: 'Lưu phân công' }).click();
+  await expect(form).toBeHidden();
+  await page.getByLabel('Ngày làm việc').fill('2026-10-28');
+  const row = page.getByRole('row').filter({ hasText: 'Hỗ trợ chuẩn bị' });
+  await expect(row).toContainText('09:00 → 10:00');
+  await row.getByRole('button', { name: 'Sửa' }).click();
+  const edit = page.getByRole('dialog', { name: 'Chỉnh sửa phân công' });
+  await expect(edit.getByLabel('Bắt đầu support')).toHaveValue('09:00');
+  await edit.getByLabel('Kết thúc support').fill('10:15');
+  await edit.getByRole('button', { name: 'Lưu phân công' }).click();
+  await expect(edit).toBeHidden();
+  await expect(row).toContainText('09:00 → 10:15');
+});

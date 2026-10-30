@@ -107,6 +107,7 @@ const QrPanel: FC<Props> = ({
         <div>
           <strong>QR động tại cơ sở</strong>
           <small>{facilityName} · Đổi theo giờ thực</small>
+          <small className="qr-support-note">Dùng khi cơ sở support chưa có máy quét mặt.</small>
         </div>
         <span className={`pill ${remaining > 5 ? "green" : "amber"}`}>
           {current ? `Còn ${remaining}s` : "Đang tải"}
