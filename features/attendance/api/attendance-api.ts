@@ -121,11 +121,15 @@ export const attendanceApi = {
   issueQr: async (
     facilityId: number,
     previousToken?: string,
+    revokeExisting = false,
+    rotationId?: string,
   ): Promise<QrChallenge> =>
     (
       await apiClient.post<QrChallenge>("/qr/challenges/", {
         facility_id: facilityId,
         ...(previousToken ? { previous_token: previousToken } : {}),
+        ...(revokeExisting ? { revoke_existing: true } : {}),
+        ...(rotationId ? { rotation_id: rotationId } : {}),
       })
     ).data,
   scanQr: async (payload: QrScanPayload): Promise<ScanResult> =>
