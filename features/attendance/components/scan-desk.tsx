@@ -185,9 +185,7 @@ const ScanDesk: FC<Props> = ({ employees, facilities, clock, active }) => {
   );
   const [recognition, setRecognition] =
     useState<ScanPayload["recognition"]>("MATCH");
-  const [draftTime, setDraftTime] = useState(() =>
-    dateTimeInput(clock.readNow()),
-  );
+  const [draftTime, setDraftTime] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [failure, setFailure] = useState("");
   const [uncertain, setUncertain] = useState(!!pending);
@@ -274,9 +272,10 @@ const ScanDesk: FC<Props> = ({ employees, facilities, clock, active }) => {
   ]);
   const locked = mutation.isPending || uncertain;
   const applyClock = (): void => {
-    if (clock.apply(draftTime))
+    if (clock.apply(draftTime ?? dateTimeInput(clock.readNow()))) {
+      setDraftTime(null);
       notify("Đồng hồ demo tiếp tục chạy từ mốc đã chọn.", "info");
-    else notify("Ngày giờ chưa hợp lệ.", "error");
+    } else notify("Ngày giờ chưa hợp lệ.", "error");
   };
   const scanClass = mutation.isPending
     ? "scanning"
@@ -467,8 +466,9 @@ const ScanDesk: FC<Props> = ({ employees, facilities, clock, active }) => {
                 <FormField
                   label="Mốc giờ demo (Việt Nam)"
                   type="datetime-local"
-                  value={draftTime}
+                  value={draftTime ?? dateTimeInput(clock.now)}
                   disabled={locked}
+                  onFocus={() => setDraftTime((value) => value ?? dateTimeInput(clock.readNow()))}
                   onChange={(event) => setDraftTime(event.target.value)}
                   slotProps={{
                     inputLabel: { shrink: true },
@@ -490,7 +490,7 @@ const ScanDesk: FC<Props> = ({ employees, facilities, clock, active }) => {
                   disabled={locked}
                   onClick={() => {
                     clock.reset();
-                    setDraftTime(dateTimeInput(Date.now()));
+                    setDraftTime(null);
                   }}
                 >
                   <RotateCcw size={12} /> Về giờ hiện tại

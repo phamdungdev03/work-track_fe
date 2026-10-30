@@ -8,6 +8,23 @@ import { RefreshCw, ScanLine } from "lucide-react";
 import { attendanceApi } from "../api/attendance-api";
 import type { QrChallenge, QrScanPayload } from "../types";
 import { errorMessage } from "@/lib/api-client";
+import { isAxiosError } from "axios";
+
+const pendingRotations = new Map<number, string>();
+function rotationKey(facilityId: number) { return `worktrack:qr-rotation:${facilityId}`; }
+function getRotation(facilityId: number): string | undefined {
+  try { return sessionStorage.getItem(rotationKey(facilityId)) ?? pendingRotations.get(facilityId); }
+  catch { return pendingRotations.get(facilityId); }
+}
+function saveRotation(facilityId: number, id: string) {
+  pendingRotations.set(facilityId, id);
+  try { sessionStorage.setItem(rotationKey(facilityId), id); } catch { /* Memory fallback. */ }
+}
+function clearRotation(facilityId: number, id: string) {
+  if (getRotation(facilityId) !== id) return;
+  pendingRotations.delete(facilityId);
+  try { sessionStorage.removeItem(rotationKey(facilityId)); } catch { /* Memory fallback. */ }
+}
 
 interface Props {
   active: boolean;
@@ -38,17 +55,26 @@ const QrPanel: FC<Props> = ({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const generation = useRef(0);
   const issuing = useRef(false);
+  const retryRotation = useRef<string | null>(null);
 
   const issue = useCallback(
-    async (previousToken?: string) => {
+    async (rotationId?: string) => {
       if (!facilityId || issuing.current) return;
       issuing.current = true;
       setBusy(true);
       setError("");
+      if (rotationId) {
+        saveRotation(facilityId, rotationId);
+        retryRotation.current = rotationId;
+        setChallenge(null);
+        setRemaining(0);
+        expiresAt.current = 0;
+        if (timer.current) clearTimeout(timer.current);
+      }
       const version = generation.current;
       const started = performance.now();
       try {
-        const data = await attendanceApi.issueQr(facilityId, previousToken);
+        const data = await attendanceApi.issueQr(facilityId, undefined, !!rotationId, rotationId);
         if (generation.current !== version) return;
         const duration = Math.max(
           0,
@@ -59,13 +85,23 @@ const QrPanel: FC<Props> = ({
         expiresAt.current = performance.now() + duration;
         setRemaining(Math.ceil(duration / 1000));
         setChallenge(data);
+        if (rotationId) clearRotation(facilityId, rotationId);
+        retryRotation.current = null;
         if (timer.current) clearTimeout(timer.current);
         timer.current = setTimeout(
           () => setCycle((value) => value + 1),
           duration,
         );
       } catch (err) {
-        if (generation.current === version) setError(errorMessage(err));
+        if (generation.current === version) {
+          if (rotationId && isAxiosError(err) && err.response?.status === 409) {
+            clearRotation(facilityId, rotationId);
+            retryRotation.current = null;
+            setError("Mã của lần đổi trước đã hết hạn hoặc bị thu hồi. Vui lòng lấy mã mới.");
+          } else {
+            setError(rotationId ? "Chưa xác định được mã mới. Vui lòng thử lại." : errorMessage(err));
+          }
+        }
       } finally {
         if (generation.current === version) {
           issuing.current = false;
@@ -80,7 +116,7 @@ const QrPanel: FC<Props> = ({
     if (!active) return;
     generation.current += 1;
     issuing.current = false;
-    const start = setTimeout(() => void issue(), 0);
+    const start = setTimeout(() => void issue(facilityId ? getRotation(facilityId) : undefined), 0);
     const tick = setInterval(
       () =>
         setRemaining(
@@ -94,11 +130,12 @@ const QrPanel: FC<Props> = ({
     return () => {
       generation.current += 1;
       issuing.current = false;
+      retryRotation.current = null;
       clearTimeout(start);
       clearInterval(tick);
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [issue, cycle, active]);
+  }, [issue, cycle, active, facilityId]);
 
   const current = challenge?.facility_id === facilityId ? challenge : null;
   return (
@@ -124,7 +161,7 @@ const QrPanel: FC<Props> = ({
               title={`QR chấm công ${facilityName}`}
             />
           ) : (
-            <span>Đang lấy mã…</span>
+            <span>{error ? "Chưa có mã hợp lệ" : "Đang lấy mã…"}</span>
           )}
         </div>
         <div className="qr-instructions">
@@ -136,7 +173,7 @@ const QrPanel: FC<Props> = ({
           <Button
             size="small"
             variant="contained"
-            disabled={!current || remaining <= 0 || disabled}
+            disabled={!current || remaining <= 0 || busy || disabled}
             startIcon={<ScanLine size={15} />}
             onClick={() => setCaptured(current!.token)}
           >
@@ -146,7 +183,9 @@ const QrPanel: FC<Props> = ({
             size="small"
             disabled={!current || busy || disabled}
             startIcon={<RefreshCw size={14} />}
-            onClick={() => void issue(current?.token)}
+            onClick={() => {
+              void issue(crypto.randomUUID());
+            }}
           >
             Đổi mã ngay
           </Button>
@@ -155,7 +194,7 @@ const QrPanel: FC<Props> = ({
       {error && (
         <Alert
           severity="error"
-          action={<Button onClick={() => void issue()}>Thử lại</Button>}
+          action={<Button disabled={busy || disabled} onClick={() => void issue(retryRotation.current ?? undefined)}>Thử lại</Button>}
         >
           {error}
         </Alert>

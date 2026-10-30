@@ -321,7 +321,7 @@ const AppShell: FC = () => {
                 </p>
                 <p>
                   Giờ ngoài ca không tự tính OT. Nhận diện và vị trí là mô
-                  phỏng; bảng tính công chưa được triển khai.
+                  phỏng; công ngày được tính từ các lượt hợp lệ.
                 </p>
               </div>
             </DialogContent>
